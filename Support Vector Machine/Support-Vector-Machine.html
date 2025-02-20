@@ -7,6 +7,7 @@
     <meta name="author" content="Remy" />
     <meta name="author" content="Marlene" />
     <script src="Support-Vector-Machine_files/header-attrs/header-attrs.js"></script>
+    <link href="Support-Vector-Machine_files/htmltools-fill/fill.css" rel="stylesheet" />
     <script src="Support-Vector-Machine_files/htmlwidgets/htmlwidgets.js"></script>
     <link href="Support-Vector-Machine_files/datatables-css/datatables-crosstalk.css" rel="stylesheet" />
     <script src="Support-Vector-Machine_files/datatables-binding/datatables.js"></script>
@@ -209,7 +210,7 @@ layout: true
 #### R Code
 
 
-```r
+``` r
 ggplot(gapminder) +
   aes(x = gdpPercap, y = lifeExp, size = pop, color = country) +
   geom_point() +
@@ -230,14 +231,14 @@ var fun = function lang(l) {
 ### More R Code
 
 
-```r
+``` r
 dplyr::starwars %&gt;% dplyr::slice_sample(n = 4)
 ```
 
 ---
 
 
-```r
+``` r
 cli::cli_alert_success("It worked!")
 ```
 
@@ -248,7 +249,7 @@ cli::cli_alert_success("It worked!")
 --
 
 
-```r
+``` r
 message("Just a friendly message")
 ```
 
@@ -259,7 +260,7 @@ message("Just a friendly message")
 --
 
 
-```r
+``` r
 warning("This could be bad...")
 ```
 
@@ -270,12 +271,12 @@ warning("This could be bad...")
 --
 
 
-```r
+``` r
 stop("I hope you're sitting down for this")
 ```
 
 ```
-## Error in eval(expr, envir, enclos): I hope you're sitting down for this
+## Error: I hope you're sitting down for this
 ```
 
 
@@ -288,7 +289,7 @@ layout: true
 exclude: false
 
 
-```r
+``` r
 tibble::as_tibble(mtcars)
 ```
 
@@ -312,7 +313,7 @@ tibble::as_tibble(mtcars)
 ---
 
 
-```r
+``` r
 knitr::kable(head(mtcars), format = 'html')
 ```
 
@@ -425,12 +426,12 @@ knitr::kable(head(mtcars), format = 'html')
 exclude: false
 
 
-```r
+``` r
 DT::datatable(head(mtcars), fillContainer = FALSE, options = list(pageLength = 4))
 ```
 
-<div class="datatables html-widget html-fill-item" id="htmlwidget-56fa611d54badabb01e1" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-56fa611d54badabb01e1">{"x":{"filter":"none","vertical":false,"fillContainer":false,"data":[["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant"],[21,21,22.8,21.4,18.7,18.1],[6,6,4,6,8,6],[160,160,108,258,360,225],[110,110,93,110,175,105],[3.9,3.9,3.85,3.08,3.15,2.76],[2.62,2.875,2.32,3.215,3.44,3.46],[16.46,17.02,18.61,19.44,17.02,20.22],[0,0,1,1,0,1],[1,1,1,0,0,0],[4,4,4,3,3,3],[4,4,1,1,2,1]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>mpg<\/th>\n      <th>cyl<\/th>\n      <th>disp<\/th>\n      <th>hp<\/th>\n      <th>drat<\/th>\n      <th>wt<\/th>\n      <th>qsec<\/th>\n      <th>vs<\/th>\n      <th>am<\/th>\n      <th>gear<\/th>\n      <th>carb<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":4,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"mpg","targets":1},{"name":"cyl","targets":2},{"name":"disp","targets":3},{"name":"hp","targets":4},{"name":"drat","targets":5},{"name":"wt","targets":6},{"name":"qsec","targets":7},{"name":"vs","targets":8},{"name":"am","targets":9},{"name":"gear","targets":10},{"name":"carb","targets":11}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[4,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-7c15ba3b05b9e24ee372" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-7c15ba3b05b9e24ee372">{"x":{"filter":"none","vertical":false,"fillContainer":false,"data":[["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant"],[21,21,22.8,21.4,18.7,18.1],[6,6,4,6,8,6],[160,160,108,258,360,225],[110,110,93,110,175,105],[3.9,3.9,3.85,3.08,3.15,2.76],[2.62,2.875,2.32,3.215,3.44,3.46],[16.46,17.02,18.61,19.44,17.02,20.22],[0,0,1,1,0,1],[1,1,1,0,0,0],[4,4,4,3,3,3],[4,4,1,1,2,1]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>mpg<\/th>\n      <th>cyl<\/th>\n      <th>disp<\/th>\n      <th>hp<\/th>\n      <th>drat<\/th>\n      <th>wt<\/th>\n      <th>qsec<\/th>\n      <th>vs<\/th>\n      <th>am<\/th>\n      <th>gear<\/th>\n      <th>carb<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":4,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"mpg","targets":1},{"name":"cyl","targets":2},{"name":"disp","targets":3},{"name":"hp","targets":4},{"name":"drat","targets":5},{"name":"wt","targets":6},{"name":"qsec","targets":7},{"name":"vs","targets":8},{"name":"am","targets":9},{"name":"gear","targets":10},{"name":"carb","targets":11}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[4,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
 
 ---
 layout: true
@@ -504,7 +505,7 @@ layout: true
 ---
 
 
-```r
+``` r
 library(ggplot2)
 (g &lt;- ggplot(mpg) + aes(hwy, cty, color = class) + geom_point())
 ```
@@ -514,12 +515,10 @@ library(ggplot2)
 ---
 
 
-```r
+``` r
 g + xaringanthemer::theme_xaringan(text_font_size = 16, title_font_size = 18) +
   ggtitle("A Plot About Cars")
 ```
-
-&lt;img src="Support-Vector-Machine_files/figure-html/plot-example-themed-1.png" width="100%" /&gt;
 
 .footnote[Requires `{showtext}`]
 
