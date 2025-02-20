@@ -299,7 +299,7 @@ cli::cli_alert_success("It worked!")
 --
 
 ```{r message=TRUE}
-message("Just a friendly message")
+message("Just a friendly message for Rémi. Wow")
 ```
 
 --
