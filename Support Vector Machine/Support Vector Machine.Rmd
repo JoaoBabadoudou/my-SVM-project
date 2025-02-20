@@ -1,0 +1,482 @@
+---
+title: "Support Vector Machine"
+subtitle: "ML Tech"  
+author: 
+  - "Joao "
+  - "Remy"
+  - "Marlene"
+date: "Febuary 2025"
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: true
+
+---
+<img id="logo-left" src="D:/DiskD/Master_program/AI2024/SVMPresentation2024/Support Vector Machine/fsa.jpeg" alt="Left Logo">
+<img id="logo-right" src="D:/DiskD/Master_program/AI2024/SVMPresentation2024/Support Vector Machine/uac.jpeg" alt="Right Logo">
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  fig.width=9, fig.height=3.5, fig.retina=3,
+  out.width = "100%",
+  cache = FALSE,
+  echo = TRUE,
+  message = FALSE, 
+  warning = FALSE,
+  hiline = TRUE
+)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+style_duo_accent(
+  primary_color = "#1382B5",
+  secondary_color = "#FF961F",
+  inverse_header_color = "#FFFFFF"
+)
+```
+
+
+
+
+## History
+
+
+
+---
+
+## Introduction 
+
+**Support vector machines (SVMs)** oﬀer a direct approach to binary classiﬁcation: 
+try to ﬁnd a hyperplane in some feature space that “best” separates the 
+two classes. In practice, however, it is diﬃcult (if not impossible) to ﬁnd a 
+hyperplane to perfectly separate the classes using just the original features. 
+SVMs overcome this by extending the idea of ﬁnding a separating hyperplane 
+in two ways: (1) loosen what we mean by “perfectly separates”, and (2) use 
+the so-called kernel trick to enlarge the feature space to the point that perfect separation of classes is (more) likely.
+
+
+---
+## Problem
+#### Optimal  separating  hyperplanes
+Rather than diving right into SVMs we’ll build up to them using concepts 
+from basic geometry, starting with hyperplanes. A hyperplane in 𝑝-dimensional 
+feature space is deﬁned by the (linear) equation $𝑓 (𝑋)  =  𝛽_{0}+ 𝛽_{1} 𝑋_{1}  + ⋯ + 𝛽_{p} 𝑋_{p} =  0$ .
+
+When $𝑝 = 2$, this deﬁnes a line in 2-D space, and when 𝑝 = 3, it deﬁnes a 
+plane in 3-D space. By deﬁnition, for points on one side of 
+the hyperplane, $𝑓 (𝑋) > 0$, and for points on the other side, $𝑓(𝑋) < 0$. For (mathematical) convenience, we’ll re-encode the binary outcome $Y_{i}$ using {-1, 1} so that $𝑌_{i}× 𝑓(𝑋_{i}) > 0$ for points on the correct side of the hyperplane. In this context the hyperplane represents a _decision boundary_ that partitions the feature space into two sets, one for each class.
+
+---
+
+```{r echo=FALSE}
+
+
+# Load libraries
+library(ggplot2)
+library(gganimate)
+library(e1071)
+
+# Your dataset
+x1 <- c(0.5, 1.1, 0.7, 2, 2.5, 2.2)
+x2 <- c(2, 2.1, 2.6, 1, 0.7, 0.3)
+y <- factor(c(1, 1, 1, 0, 0, 0), levels = c(0, 1))
+data <- data.frame(y, x1, x2)
+
+# Fit a linear SVM
+svm_model <- svm(y ~ x1 + x2, data = data, kernel = "linear", scale = FALSE)
+
+# Extract hyperplane coefficients
+w <- coef(svm_model)[2:3]  # Weights for x1 and x2
+b <- -svm_model$rho        # Intercept
+
+# Define the hyperplane equation: w1*x1 + w2*x2 + b = 0
+# Solve for x2: x2 = (-w1*x1 - b) / w2
+hyperplane <- function(x1) {
+  (-w[1] * x1 - b) / w[2]
+}
+
+# Create a sequence of x1 values for plotting the hyperplane
+x1_seq <- seq(min(data$x1) - 1, max(data$x1) + 1, length.out = 100)
+x2_seq <- hyperplane(x1_seq)
+
+# Create a data frame for the hyperplane
+hyperplane_data <- data.frame(x1 = x1_seq, x2 = x2_seq)
+
+# Plot the data points and hyperplane
+p <- ggplot(data, aes(x = x1, y = x2)) +
+  geom_point(aes(color = y), size = 4) +
+  geom_line(data = hyperplane_data, aes(x = x1, y = x2), color = "blue", size = 1) +
+  scale_color_manual(values = c("red", "green")) +
+  labs(title = "2D Hyperplane for SVM", x = "X1", y = "X2") +
+  theme_minimal()
+
+# Animate the hyperplane by varying the intercept
+# Create a sequence of intercepts for animation
+intercept_seq <- seq(-2, 2, length.out = 20)
+animated_hyperplanes <- lapply(intercept_seq, function(int) {
+  data.frame(
+    x1 = x1_seq,
+    x2 = (-w[1] * x1_seq - int) / w[2],
+    intercept = int
+  )
+})
+animated_hyperplanes <- do.call(rbind, animated_hyperplanes)
+
+# Add animation to the plot
+anim <- ggplot(data, aes(x = x1, y = x2)) +
+  geom_point(aes(color = y), size = 4) +
+  geom_line(data = animated_hyperplanes, aes(x = x1, y = x2, group = intercept), color = "blue", size = 1) +
+  scale_color_manual(values = c("red", "green")) +
+  labs(title = "2D Hyperplane Animation", x = "X1", y = "X2")  +
+  transition_states(intercept, transition_length = 2, state_length = 1) +
+  ggtitle("Hyperplane Intercept: {closest_state}")
+
+# Save the animation
+animate(anim, nframes = 20, fps = 2)
+
+```
+---
+## The hard margin classiﬁer
+
+As you might imagine, for two separable classes, there are an inﬁnite number 
+of separating hyperplanes!
+
+So which decision boundary is “best”? 
+Well, it depends on how we deﬁne “best”. If you were asked to draw a decision 
+boundary with good generalization performance on the left side of Figure 14.2, 
+how would it look to you? Naturally, you would probably draw a boundary 
+that provides the maximum separation between the two classes, and that’s 
+exactly what the HMC is doing!
+
+Text can be **bold**, _italic_, ~~strikethrough~~, or `inline code`.
+
+[Link to another slide](#colors).
+
+### Lorem Ipsum
+
+Dolor imperdiet nostra sapien scelerisque praesent curae metus facilisis dignissim tortor. 
+Lacinia neque mollis nascetur neque urna velit bibendum. 
+Himenaeos suspendisse leo varius mus risus sagittis aliquet venenatis duis nec.
+
+- Dolor cubilia nostra nunc sodales
+
+- Consectetur aliquet mauris blandit
+
+- Ipsum dis nec porttitor urna sed
+
+---
+name: colors
+
+## Colors
+
+.left-column[
+Text color
+
+[Link Color](#3)
+
+**Bold Color**
+
+_Italic Color_
+
+`Inline Code`
+]
+
+.right-column[
+Lorem ipsum dolor sit amet, [consectetur adipiscing elit (link)](#3), 
+sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+Erat nam at lectus urna.
+Pellentesque elit ullamcorper **dignissim cras tincidunt (bold)** lobortis feugiat. 
+_Eros donec ac odio tempor_ orci dapibus ultrices. 
+Id porta nibh venenatis cras sed felis eget velit aliquet.
+Aliquam id diam maecenas ultricies mi.
+Enim sit amet 
+`code_color("inline")`
+venenatis urna cursus eget nunc scelerisque viverra.
+]
+
+---
+
+# Big Topic or Inverse Slides `#`
+
+## Slide Headings `##`
+
+### Sub-slide Headings `###`
+
+#### Bold Call-Out `####`
+
+This is a normal paragraph text. Only use header levels 1-4.
+
+##### Possible, but not recommended `#####`
+
+###### Definitely don't use h6 `######`
+
+---
+
+# Left-Column Headings
+
+.left-column[
+## First
+
+## Second
+
+## Third
+]
+
+.right-column[
+Dolor quis aptent mus a dictum ultricies egestas.
+
+Amet egestas neque tempor fermentum proin massa!
+
+Dolor elementum fermentum pharetra lectus arcu pulvinar.
+]
+
+---
+class: inverse center middle
+
+# Topic Changing Interstitial
+
+--
+
+```
+class: inverse center middle
+```
+
+---
+layout: true
+
+## Blocks
+
+---
+
+### Blockquote
+
+> This is a blockquote following a header.
+>
+> When something is important enough, you do it even if the odds are not in your favor.
+
+---
+
+### Code Blocks
+
+#### R Code
+
+```{r eval=FALSE}
+ggplot(gapminder) +
+  aes(x = gdpPercap, y = lifeExp, size = pop, color = country) +
+  geom_point() +
+  facet_wrap(~year)
+```
+
+#### JavaScript
+
+```js
+var fun = function lang(l) {
+  dateformat.i18n = require('./lang/' + l)
+  return true;
+}
+```
+
+---
+
+### More R Code
+
+```{r eval=FALSE}
+dplyr::starwars %>% dplyr::slice_sample(n = 4)
+```
+
+---
+
+```{r message=TRUE, eval=requireNamespace("cli", quietly = TRUE)}
+cli::cli_alert_success("It worked!")
+```
+
+--
+
+```{r message=TRUE}
+message("Just a friendly message")
+```
+
+--
+
+```{r warning=TRUE}
+warning("This could be bad...")
+```
+
+--
+
+```{r error=TRUE}
+stop("I hope you're sitting down for this")
+```
+
+
+---
+layout: true
+
+## Tables
+
+---
+exclude: `r if (requireNamespace("tibble", quietly=TRUE)) "false" else "true"`
+
+```{r eval=requireNamespace("tibble", quietly=TRUE)}
+tibble::as_tibble(mtcars)
+```
+
+---
+
+```{r}
+knitr::kable(head(mtcars), format = 'html')
+```
+
+---
+exclude: `r if (requireNamespace("DT", quietly=TRUE)) "false" else "true"`
+
+```{r eval=requireNamespace("DT", quietly=TRUE)}
+DT::datatable(head(mtcars), fillContainer = FALSE, options = list(pageLength = 4))
+```
+
+---
+layout: true
+
+## Lists
+
+---
+
+.pull-left[
+#### Here is an unordered list:
+
+*   Item foo
+*   Item bar
+*   Item baz
+*   Item zip
+]
+
+.pull-right[
+
+#### And an ordered list:
+
+1.  Item one
+1.  Item two
+1.  Item three
+1.  Item four
+]
+
+---
+
+### And a nested list:
+
+- level 1 item
+  - level 2 item
+  - level 2 item
+    - level 3 item
+    - level 3 item
+- level 1 item
+  - level 2 item
+  - level 2 item
+  - level 2 item
+- level 1 item
+  - level 2 item
+  - level 2 item
+- level 1 item
+
+---
+
+### Nesting an ol in ul in an ol
+
+- level 1 item (ul)
+  1. level 2 item (ol)
+  1. level 2 item (ol)
+    - level 3 item (ul)
+    - level 3 item (ul)
+- level 1 item (ul)
+  1. level 2 item (ol)
+  1. level 2 item (ol)
+    - level 3 item (ul)
+    - level 3 item (ul)
+  1. level 4 item (ol)
+  1. level 4 item (ol)
+    - level 3 item (ul)
+    - level 3 item (ul)
+- level 1 item (ul)
+
+---
+layout: true
+
+## Plots
+
+---
+
+```{r plot-example, eval=requireNamespace("ggplot2", quietly=TRUE)}
+library(ggplot2)
+(g <- ggplot(mpg) + aes(hwy, cty, color = class) + geom_point())
+```
+
+---
+
+```{r plot-example-themed, eval=requireNamespace("showtext", quietly=TRUE) && requireNamespace("ggplot2", quietly=TRUE)}
+g + xaringanthemer::theme_xaringan(text_font_size = 16, title_font_size = 18) +
+  ggtitle("A Plot About Cars")
+```
+
+.footnote[Requires `{showtext}`]
+
+---
+layout: false
+
+## Square image
+
+<center><img src="https://octodex.github.com/images/labtocat.png" alt="GithHub Octocat" height="400px" /></center>
+
+.footnote[GitHub Octocat]
+
+---
+
+### Wide image
+
+![A wide image with a diagram of branching in git.](https://docs.github.com/assets/images/help/repository/branching.png)
+
+.footnote[Wide images scale to 100% slide width]
+
+---
+
+## Two images
+
+.pull-left[
+![A GitHub Octocat, style "mother hubber"](https://octodex.github.com/images/motherhubbertocat.png)
+]
+
+.pull-right[
+![A GitHub Octocat, style "dinotcat"](https://octodex.github.com/images/dinotocat.png)
+]
+
+---
+
+### Definition lists can be used with HTML syntax.
+
+<dl>
+<dt>Name</dt>
+<dd>Godzilla</dd>
+<dt>Born</dt>
+<dd>1952</dd>
+<dt>Birthplace</dt>
+<dd>Japan</dd>
+<dt>Color</dt>
+<dd>Green</dd>
+</dl>
+
+---
+class: center, middle
+
+# Thanks!
+
+Slides created via the R packages:
+
+[**xaringan**](https://github.com/yihui/xaringan)<br>
+[gadenbuie/xaringanthemer](https://github.com/gadenbuie/xaringanthemer)
+
+The chakra comes from [remark.js](https://remarkjs.com), [**knitr**](http://yihui.name/knitr), and [R Markdown](https://rmarkdown.rstudio.com).
