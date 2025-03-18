@@ -8,6 +8,7 @@ author:
 date: "Febuary 2025"
 output:
   xaringan::moon_reader:
+    mathjax: "default"
     css: xaringan-themer.css
     nature:
       slideNumberFormat: "%current%"
@@ -17,13 +18,20 @@ output:
       countIncrementalSlides: true
 
 ---
-<img id="logo-left" src="D:/DiskD/Master_program/AI2024/SVMPresentation2024/Support Vector Machine/fsa.jpeg" alt="Left Logo">
-<img id="logo-right" src="D:/DiskD/Master_program/AI2024/SVMPresentation2024/Support Vector Machine/uac.jpeg" alt="Right Logo">
-```{r setup, include=FALSE}
+
+class: center, middle, title-slide
+
+<div class="header">
+  <img src="fsa.jpeg" class="logo-left">
+  <img src="uac.jpeg" class="logo-right">
+</div>
+
+
+```{r}
 options(htmltools.dir.version = FALSE)
 knitr::opts_chunk$set(
   fig.width=9, fig.height=3.5, fig.retina=3,
-  out.width = "100%",
+  out.width = "50%",
   cache = FALSE,
   echo = TRUE,
   message = FALSE, 
@@ -33,23 +41,62 @@ knitr::opts_chunk$set(
 ```
 
 ```{r xaringan-themer, include=FALSE, warning=FALSE}
+
 library(xaringanthemer)
 style_duo_accent(
   primary_color = "#1382B5",
   secondary_color = "#FF961F",
   inverse_header_color = "#FFFFFF"
 )
+
 ```
 
+```{r message=FALSE, warning=FALSE, include=FALSE}
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(GGally)
+library(gt)
+library(e1071)
+library(caret)
+library(skimr)
+library(DALEX)
+df <- read_delim("diabetes.csv", delim = ";",
+escape_double    =    FALSE,    col_types    =    cols(Outcome    =    col_factor(levels    =
+c("0",
+"1"))),    trim_ws    =    TRUE)
+DT::datatable(head(df), fillContainer = FALSE, options = list(pageLength = 4))
+
+split_size        =            0.80
+sample_size    =            floor(split_size                *            nrow(df)) 
+set.seed(563)
+train_indices <- sample(seq_len(nrow(df)), size =
+sample_size)
+train <- df[train_indices, ] 
+test <- df[-train_indices, ]
 
 
 
-## History
 
-
-
+```
 ---
 
+# Agenda
+
+1. Introduction
+
+2. History
+
+3. Optimal seperating hyperplane
+
+4. Support Vector Machine
+
+5. Application
+
+6. Conclusion
+---
 ## Introduction 
 
 **Support vector machines (SVMs)** oﬀer a direct approach to binary classiﬁcation: 
@@ -61,12 +108,19 @@ in two ways: (1) loosen what we mean by “perfectly separates”, and (2) use
 the so-called kernel trick to enlarge the feature space to the point that perfect separation of classes is (more) likely.
 
 
+
+
+
+
 ---
-## Problem
-#### Optimal  separating  hyperplanes
-Rather than diving right into SVMs we’ll build up to them using concepts 
-from basic geometry, starting with hyperplanes. A hyperplane in 𝑝-dimensional 
-feature space is deﬁned by the (linear) equation $𝑓 (𝑋)  =  𝛽_{0}+ 𝛽_{1} 𝑋_{1}  + ⋯ + 𝛽_{p} 𝑋_{p} =  0$ .
+
+## History
+
+---
+## Optimal  separating  hyperplanes
+ A hyperplane in 𝑝-dimensional feature space is deﬁned by the (linear) equation 
+ 
+ $$𝑓 (𝑋)  =  𝛽_{0}+ 𝛽_{1} 𝑋_{1}  + ⋯ + 𝛽_{p} 𝑋_{p} =  0$$
 
 When $𝑝 = 2$, this deﬁnes a line in 2-D space, and when 𝑝 = 3, it deﬁnes a 
 plane in 3-D space. By deﬁnition, for points on one side of 
@@ -74,400 +128,878 @@ the hyperplane, $𝑓 (𝑋) > 0$, and for points on the other side, $𝑓(𝑋)
 
 ---
 
-```{r echo=FALSE}
+.pull-left[ 
 
-
-# Load libraries
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.show="hold", out.width="80%", fig.height=8}
+# Load ggplot2
 library(ggplot2)
-library(gganimate)
-library(e1071)
 
-# Your dataset
-x1 <- c(0.5, 1.1, 0.7, 2, 2.5, 2.2)
-x2 <- c(2, 2.1, 2.6, 1, 0.7, 0.3)
-y <- factor(c(1, 1, 1, 0, 0, 0), levels = c(0, 1))
-data <- data.frame(y, x1, x2)
+# Define the line equation: y = -0.5x + 1
+line_eq <- function(x) -0.5 * x + 1
 
-# Fit a linear SVM
-svm_model <- svm(y ~ x1 + x2, data = data, kernel = "linear", scale = FALSE)
+# Generate x values
+x_vals <- seq(-5, 5, length.out = 100)
 
-# Extract hyperplane coefficients
-w <- coef(svm_model)[2:3]  # Weights for x1 and x2
-b <- -svm_model$rho        # Intercept
+# Create dataframe for the line
+line_df <- data.frame(x = x_vals, y = line_eq(x_vals))
 
-# Define the hyperplane equation: w1*x1 + w2*x2 + b = 0
-# Solve for x2: x2 = (-w1*x1 - b) / w2
-hyperplane <- function(x1) {
-  (-w[1] * x1 - b) / w[2]
-}
+# Plot the line
+ggplot(line_df, aes(x = x, y = y)) +
+  geom_line(color = "skyblue", size = 1.2) +
+  theme_minimal() +
+  labs(title = "2D Line Plot", x = "X-axis", y = "Y-axis")
 
-# Create a sequence of x1 values for plotting the hyperplane
-x1_seq <- seq(min(data$x1) - 1, max(data$x1) + 1, length.out = 100)
-x2_seq <- hyperplane(x1_seq)
-
-# Create a data frame for the hyperplane
-hyperplane_data <- data.frame(x1 = x1_seq, x2 = x2_seq)
-
-# Plot the data points and hyperplane
-p <- ggplot(data, aes(x = x1, y = x2)) +
-  geom_point(aes(color = y), size = 4) +
-  geom_line(data = hyperplane_data, aes(x = x1, y = x2), color = "blue", size = 1) +
-  scale_color_manual(values = c("red", "green")) +
-  labs(title = "2D Hyperplane for SVM", x = "X1", y = "X2") +
-  theme_minimal()
-
-# Animate the hyperplane by varying the intercept
-# Create a sequence of intercepts for animation
-intercept_seq <- seq(-2, 2, length.out = 20)
-animated_hyperplanes <- lapply(intercept_seq, function(int) {
-  data.frame(
-    x1 = x1_seq,
-    x2 = (-w[1] * x1_seq - int) / w[2],
-    intercept = int
-  )
-})
-animated_hyperplanes <- do.call(rbind, animated_hyperplanes)
-
-# Add animation to the plot
-anim <- ggplot(data, aes(x = x1, y = x2)) +
-  geom_point(aes(color = y), size = 4) +
-  geom_line(data = animated_hyperplanes, aes(x = x1, y = x2, group = intercept), color = "blue", size = 1) +
-  scale_color_manual(values = c("red", "green")) +
-  labs(title = "2D Hyperplane Animation", x = "X1", y = "X2")  +
-  transition_states(intercept, transition_length = 2, state_length = 1) +
-  ggtitle("Hyperplane Intercept: {closest_state}")
-
-# Save the animation
-animate(anim, nframes = 20, fps = 2)
 
 ```
+
+]
+
+.pull-right[ 
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.show="hold", out.width="100%", fig.height=8}
+
+## Load plotly
+library(plotly)
+
+# Define the plane equation: z = - (0.5*x + 0.2*y - 1)
+plane_eq <- function(x, y) - (0.5 * x + 0.2 * y - 1)
+
+# Generate grid of x and y values
+x_vals <- seq(-5, 5, length.out = 30)  # More points for smooth surface
+y_vals <- seq(-5, 5, length.out = 30)
+grid <- expand.grid(x = x_vals, y = y_vals)
+
+# Compute z values
+grid$z <- plane_eq(grid$x, grid$y)
+
+# Create 3D plot with a solid blue plane
+fig <- plot_ly(z = matrix(grid$z, nrow = length(x_vals), ncol = length(y_vals)), 
+               x = x_vals, 
+               y = y_vals, 
+               type = "surface", 
+               colors = c("skyblue")) %>%
+  layout(title = "3D Plane (Blue Surface)",
+         scene = list(xaxis = list(title = "X-axis"),
+                      yaxis = list(title = "Y-axis"),
+                      zaxis = list(title = "Z-axis")))
+
+
+fig
+
+```
+
+
+
+]
+
+
+
+
+
+
+
 ---
-## The hard margin classiﬁer
+### The hard margin classiﬁer
 
+
+
+.pull-left[
 As you might imagine, for two separable classes, there are an inﬁnite number 
-of separating hyperplanes!
-
-So which decision boundary is “best”? 
-Well, it depends on how we deﬁne “best”. If you were asked to draw a decision 
-boundary with good generalization performance on the left side of Figure 14.2, 
+of separating hyperplanes! So which decision boundary is **best**? If you were asked to draw a decision 
+boundary with good generalization performance , 
 how would it look to you? Naturally, you would probably draw a boundary 
 that provides the maximum separation between the two classes, and that’s 
-exactly what the HMC is doing!
-
-Text can be **bold**, _italic_, ~~strikethrough~~, or `inline code`.
-
-[Link to another slide](#colors).
-
-### Lorem Ipsum
-
-Dolor imperdiet nostra sapien scelerisque praesent curae metus facilisis dignissim tortor. 
-Lacinia neque mollis nascetur neque urna velit bibendum. 
-Himenaeos suspendisse leo varius mus risus sagittis aliquet venenatis duis nec.
-
-- Dolor cubilia nostra nunc sodales
-
-- Consectetur aliquet mauris blandit
-
-- Ipsum dis nec porttitor urna sed
-
----
-name: colors
-
-## Colors
-
-.left-column[
-Text color
-
-[Link Color](#3)
-
-**Bold Color**
-
-_Italic Color_
-
-`Inline Code`
-]
-
-.right-column[
-Lorem ipsum dolor sit amet, [consectetur adipiscing elit (link)](#3), 
-sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-Erat nam at lectus urna.
-Pellentesque elit ullamcorper **dignissim cras tincidunt (bold)** lobortis feugiat. 
-_Eros donec ac odio tempor_ orci dapibus ultrices. 
-Id porta nibh venenatis cras sed felis eget velit aliquet.
-Aliquam id diam maecenas ultricies mi.
-Enim sit amet 
-`code_color("inline")`
-venenatis urna cursus eget nunc scelerisque viverra.
-]
-
----
-
-# Big Topic or Inverse Slides `#`
-
-## Slide Headings `##`
-
-### Sub-slide Headings `###`
-
-#### Bold Call-Out `####`
-
-This is a normal paragraph text. Only use header levels 1-4.
-
-##### Possible, but not recommended `#####`
-
-###### Definitely don't use h6 `######`
-
----
-
-# Left-Column Headings
-
-.left-column[
-## First
-
-## Second
-
-## Third
-]
-
-.right-column[
-Dolor quis aptent mus a dictum ultricies egestas.
-
-Amet egestas neque tempor fermentum proin massa!
-
-Dolor elementum fermentum pharetra lectus arcu pulvinar.
-]
-
----
-class: inverse center middle
-
-# Topic Changing Interstitial
-
---
-
-```
-class: inverse center middle
-```
-
----
-layout: true
-
-## Blocks
-
----
-
-### Blockquote
-
-> This is a blockquote following a header.
->
-> When something is important enough, you do it even if the odds are not in your favor.
-
----
-
-### Code Blocks
-
-#### R Code
-
-```{r eval=FALSE}
-ggplot(gapminder) +
-  aes(x = gdpPercap, y = lifeExp, size = pop, color = country) +
-  geom_point() +
-  facet_wrap(~year)
-```
-
-#### JavaScript
-
-```js
-var fun = function lang(l) {
-  dateformat.i18n = require('./lang/' + l)
-  return true;
-}
-```
-
----
-
-### More R Code
-
-```{r eval=FALSE}
-dplyr::starwars %>% dplyr::slice_sample(n = 4)
-```
-
----
-
-```{r message=TRUE, eval=requireNamespace("cli", quietly = TRUE)}
-cli::cli_alert_success("It worked!")
-```
-
---
-
-```{r message=TRUE}
-message("Just a friendly message for Rémi. Wow")
-```
-
---
-
-```{r warning=TRUE}
-warning("This could be bad...")
-```
-
---
-
-```{r error=TRUE}
-stop("I hope you're sitting down for this")
-```
-
-
----
-layout: true
-
-## Tables
-
----
-exclude: `r if (requireNamespace("tibble", quietly=TRUE)) "false" else "true"`
-
-```{r eval=requireNamespace("tibble", quietly=TRUE)}
-tibble::as_tibble(mtcars)
-```
-
----
-
-```{r}
-knitr::kable(head(mtcars), format = 'html')
-```
-
----
-exclude: `r if (requireNamespace("DT", quietly=TRUE)) "false" else "true"`
-
-```{r eval=requireNamespace("DT", quietly=TRUE)}
-DT::datatable(head(mtcars), fillContainer = FALSE, options = list(pageLength = 4))
-```
-
----
-layout: true
-
-## Lists
-
----
-
-.pull-left[
-#### Here is an unordered list:
-
-*   Item foo
-*   Item bar
-*   Item baz
-*   Item zip
-]
-
-.pull-right[
-
-#### And an ordered list:
-
-1.  Item one
-1.  Item two
-1.  Item three
-1.  Item four
-]
-
----
-
-### And a nested list:
-
-- level 1 item
-  - level 2 item
-  - level 2 item
-    - level 3 item
-    - level 3 item
-- level 1 item
-  - level 2 item
-  - level 2 item
-  - level 2 item
-- level 1 item
-  - level 2 item
-  - level 2 item
-- level 1 item
-
----
-
-### Nesting an ol in ul in an ol
-
-- level 1 item (ul)
-  1. level 2 item (ol)
-  1. level 2 item (ol)
-    - level 3 item (ul)
-    - level 3 item (ul)
-- level 1 item (ul)
-  1. level 2 item (ol)
-  1. level 2 item (ol)
-    - level 3 item (ul)
-    - level 3 item (ul)
-  1. level 4 item (ol)
-  1. level 4 item (ol)
-    - level 3 item (ul)
-    - level 3 item (ul)
-- level 1 item (ul)
-
----
-layout: true
-
-## Plots
-
----
-
-```{r plot-example, eval=requireNamespace("ggplot2", quietly=TRUE)}
+exactly what the HMC is doing! Well, it depends on how we deﬁne “best”.  
+The HMC is one such “optimal” separating hyperplane and the simplest type of 
+SVM. The HMC is optimal in the sense that it separates the two classes while 
+maximizing the distance to the closest points from either class ]
+
+.pull-right[ 
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.show="hold", out.width="80%", fig.height=8}
+# Load necessary libraries
 library(ggplot2)
-(g <- ggplot(mpg) + aes(hwy, cty, color = class) + geom_point())
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate two clearly separated classes
+n <- 50  # Number of points per class
+
+# Class +1: Higher income, larger lot size
+X1_pos <- runif(n, min = 70, max = 100)
+X2_pos <- runif(n, min = 30, max = 50)
+
+# Class -1: Lower income, smaller lot size
+X1_neg <- runif(n, min = 30, max = 60)
+X2_neg <- runif(n, min = 5, max = 25)
+
+# Combine data
+X1 <- c(X1_pos, X1_neg)
+X2 <- c(X2_pos, X2_neg)
+Y <- factor(c(rep("+1 (Owns Mower)", n), rep("-1 (Does Not Own)", n)))
+
+# Create dataframe
+df <- data.frame(X1, X2, Y)
+
+# Define SVM decision boundary: X2 = -0.5 * X1 + 50
+decision_boundary <- function(x) -0.5 * x + 50
+
+# Define margins (parallel lines at a fixed distance)
+margin_pos <- function(x) -0.5 * x + 55  # Upper margin
+margin_neg <- function(x) -0.5 * x + 45  # Lower margin
+
+# Identify support vectors (points near margins)
+support_vectors <- df[abs(df$X2 - decision_boundary(df$X1)) < 5, ]
+
+# Plot the data with decision boundary, margins, and support vectors
+ggplot(df, aes(x = X1, y = X2, color = Y)) +
+  geom_point(size = 3, alpha = 0.7) +  # Data points
+  scale_color_manual(values = c("blue", "red")) +
+  
+  # Decision boundary (black)
+  geom_abline(intercept = 60, slope = -0.5, linetype = "solid", 
+              color = "black", size = 1) +
+  
+  # Margin lines (dashed)
+  geom_abline(intercept = 90, slope = -1,linetype = "dashed",  size = 1) +
+  geom_abline(intercept = 100, slope = -1,   size = 1) +
+  
+  # Highlight support vectors
+  geom_point(data = support_vectors, aes(x = X1, y = X2), size = 4, shape = 1, stroke = 1.5, color = "black") +
+  
+  labs(title = "Hard Margin SVM: Decision Boundary ",
+       x = "Household Income (X1) in $1000s",
+       y = "Lot Size (X2) in 1000s of sqft",
+       color = "Class") 
+
 ```
 
----
+The decision boundary (i.e., hyperplane) from the HMC separates the 
+two classes by maximizing the distance between them. This maximized distance is referred to as the margin 𝑀.
+]
 
-```{r plot-example-themed, eval=requireNamespace("showtext", quietly=TRUE) && requireNamespace("ggplot2", quietly=TRUE)}
-g + xaringanthemer::theme_xaringan(text_font_size = 16, title_font_size = 18) +
-  ggtitle("A Plot About Cars")
-```
 
-.footnote[Requires `{showtext}`]
 
----
-layout: false
 
-## Square image
 
-<center><img src="https://octodex.github.com/images/labtocat.png" alt="GithHub Octocat" height="400px" /></center>
 
-.footnote[GitHub Octocat]
+
+
+
+
+
 
 ---
 
-### Wide image
 
-![A wide image with a diagram of branching in git.](https://docs.github.com/assets/images/help/repository/branching.png)
 
-.footnote[Wide images scale to 100% slide width]
-
----
-
-## Two images
 
 .pull-left[
-![A GitHub Octocat, style "mother hubber"](https://octodex.github.com/images/motherhubbertocat.png)
+Geometrically, 
+ﬁnding the HMC for two separable classes amounts to the following:
+-  Draw  the  convex   hull     around  each  class  
+-   Draw  the  shortest  line  segment  that  connects  the  two  convex  hulls 
+(this  is  the  dotted  line  segment  ).
+-  The  perpendicular  bisector  of  this  line  segment  is  the  HMC!
+-   The margin boundaries are formed by drawing lines that pass 
+through the support vectors and are parallel to the separating 
+hyperplane .
 ]
 
 .pull-right[
-![A GitHub Octocat, style "dinotcat"](https://octodex.github.com/images/dinotocat.png)
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.show="hold", out.width="80%", fig.height=8}
+
+# Load necessary libraries
+library(ggplot2)
+library(ggforce)   # For convex hulls
+library(tidyverse) # For data manipulation
+library(sp)        # For computing distances
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate standardized data for two separate classes
+n <- 50  # Points per class
+
+# Class "Yes" (green circles)
+X1_yes <- rnorm(n, mean = 3, sd = 1.2)
+X2_yes <- rnorm(n, mean = 3, sd = 1.2)
+
+# Class "No" (orange triangles)
+X1_no <- rnorm(n, mean = -3, sd = 1.2)
+X2_no <- rnorm(n, mean = -3, sd = 1.2)
+
+# Combine into a dataframe
+df <- data.frame(
+  Income = c(X1_yes, X1_no),
+  LotSize = c(X2_yes, X2_no),
+  Class = factor(c(rep("Yes", n), rep("No", n)))
+)
+df <- df[-18,]
+# Compute convex hulls
+convex_hull_yes <- df[df$Class == "Yes", ][chull(df[df$Class == "Yes", c("Income", "LotSize")]), ]
+convex_hull_no  <- df[df$Class == "No", ][chull(df[df$Class == "No", c("Income", "LotSize")]), ]
+
+# Compute the shortest line segment between convex hulls
+dist_matrix <- as.matrix(dist(rbind(convex_hull_yes[, c("Income", "LotSize")], 
+                                    convex_hull_no[, c("Income", "LotSize")])))
+
+# Extract indices of the closest pair (support vectors)
+n1 <- nrow(convex_hull_yes)
+n2 <- nrow(convex_hull_no)
+dist_matrix <- dist_matrix[1:n1, (n1 + 1):(n1 + n2)]
+
+min_index <- which(dist_matrix == min(dist_matrix), arr.ind = TRUE)
+point1 <- convex_hull_yes[min_index[1], ] # Support vector from class "Yes"
+point2 <- convex_hull_no[min_index[2], ]  # Support vector from class "No"
+
+# Compute perpendicular bisector (Hard Margin Classifier)
+midpoint <- data.frame(
+  Income = (point1$Income + point2$Income) / 2,
+  LotSize = (point1$LotSize + point2$LotSize) / 2
+)
+
+slope <- (point2$LotSize - point1$LotSize) / (point2$Income - point1$Income)
+perpendicular_slope <- -1 / slope  # Perpendicular bisector
+
+# Function for HMC (hard margin classifier)
+hmc_line <- function(x) midpoint$LotSize + perpendicular_slope * (x - midpoint$Income)
+
+# Functions for margin lines (parallel to the HMC)
+margin_pos <- function(x) point1$LotSize + perpendicular_slope * (x - point1$Income)
+margin_neg <- function(x) point2$LotSize + perpendicular_slope * (x - point2$Income)
+
+
+
+
+# Create plot
+ggplot(df, aes(x = Income, y = LotSize, color = Class, shape = Class)) +
+  
+  # Scatter plot points
+  geom_point(size = 3, alpha = 0.8) +
+  scale_color_manual(values = c("darkorange", "darkcyan")) +
+  scale_shape_manual(values = c(17, 16)) +
+  
+  # Convex hulls
+  geom_polygon(data = convex_hull_yes, aes(x = Income, y = LotSize), fill = NA, color = "black", linetype = "solid") +
+  geom_polygon(data = convex_hull_no, aes(x = Income, y = LotSize), fill = NA, color = "black", linetype = "solid") +
+  
+  # Shortest connecting line
+  geom_segment(aes(x = point1$Income, y = point1$LotSize, 
+                   xend = point2$Income, yend = point2$LotSize), 
+               color = "black", linetype = "dotted", size = 1.2) +
+  
+  # HMC (Hard Margin Classifier) - perpendicular bisector
+  stat_function(fun = hmc_line, color = "black", size = 1) +
+  
+  # Margin boundaries (parallel to the HMC)
+  stat_function(fun = margin_pos, color = "black", linetype = "dashed", size = 0.8) +
+  stat_function(fun = margin_neg, color = "black", linetype = "dashed", size = 0.8) +
+  
+  # Support vectors (highlighted in red)
+  geom_point(data = rbind(point1, point2), aes(x = Income, y = LotSize), color = "red",
+             size = 4) +
+  # Labels and theme
+  labs(
+    x = "Income (standardized)",
+    y = "Lot size (standardized)",
+    title = "Hard Margin SVM with Convex Hulls",
+    color = "Owns a riding mower?"
+  ) 
+
+
+```
+**Figure:**HMC for the simulated riding mower data. The solid black 
+line forms the decision boundary (in this case, a separating hyperplane), while 
+the dashed lines form the boundaries of the margins (shaded regions) on each 
+side of the hyperplane
+
 ]
+.footnotes[
+The convex hull of a set of points in 2-D space can be thought of as the shape formed
+]
+---
+.pull-left[
+This can also be formulated as an optimization problem. Mathematically speaking, the HMC estimates the coeﬃcients of the hyperplane by solving a quadratic 
+programming problem with linear inequality constraints, in particular:
+
+![  ](HMC.png)
+
+
+
+]
+
+
+
+.pull-right[
+Put diﬀerently, the HMC ﬁnds the separating hyperplane that provides 
+the largest margin/gap between the two classes. The width of both margin boundaries 
+is M. With    the    constraint $\displaystyle \sum_{j=i}^{p} \beta_{j}^2 = 1$  the quantity $\displaystyle y_{i} \left( \beta_{0} + \beta_{1}x_{i1} + ... + \beta_{p}x_{ip} \right)$ represents the distance from the 𝑖-th data point to the decision boundary. Note that the solution to the optimization problem above does not allow any points to be on the wrong side of the margin; 
+**hence the term hard margin classiﬁer**.
+
+]
+
 
 ---
 
-### Definition lists can be used with HTML syntax.
+### The soft margin classifier
 
-<dl>
-<dt>Name</dt>
-<dd>Godzilla</dd>
-<dt>Born</dt>
-<dd>1952</dd>
-<dt>Birthplace</dt>
-<dd>Japan</dd>
-<dt>Color</dt>
-<dd>Green</dd>
-</dl>
+.pull-left[
+Sometimes perfect separation is achievable, but not desirable!
+
+While the data are still perfectly separable, the decision boundaries obtained 
+using the HMC will not generalize well to new data and accuracy will suﬀer (i.e., these models are not robust to outliers in the feature space). 
+
+In this situation, we can loosen the constraints (or __soften the margin__ ) by 
+allowing some points to be on the wrong side of the margin; this is referred 
+to as the the __soft margin classiﬁer__ (SMC)
+
+]
+
+.pull-right[
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.show="hold", out.width="80%", fig.height=8}
+# Load necessary libraries
+library(ggplot2)
+library(ggforce)   # For convex hulls
+library(tidyverse) # For data manipulation
+library(sp)        # For computing distances
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate standardized data for two separate classes
+n <- 50  # Points per class
+
+# Class "Yes" (green circles)
+X1_yes <- rnorm(n, mean = 3, sd = 1.2)
+X2_yes <- rnorm(n, mean = 3, sd = 1.2)
+
+# Class "No" (orange triangles)
+X1_no <- rnorm(n, mean = -3, sd = 1.2)
+X2_no <- rnorm(n, mean = -3, sd = 1.2)
+
+# Combine into a dataframe
+df <- data.frame(
+  Income = c(X1_yes, X1_no),
+  LotSize = c(X2_yes, X2_no),
+  Class = factor(c(rep("Yes", n), rep("No", n)))
+)
+# Compute perpendicular bisector (Hard Margin Classifier)
+outliers <- data.frame(
+  Income = 0.1,
+  LotSize = 3, Class= "No"
+)
+df <- rbind(df, outliers)
+
+# Compute convex hulls
+convex_hull_yes <- df[df$Class == "Yes", ][chull(df[df$Class == "Yes", c("Income", "LotSize")]), ]
+convex_hull_no  <- df[df$Class == "No", ][chull(df[df$Class == "No", c("Income", "LotSize")]), ]
+
+# Compute the shortest line segment between convex hulls
+dist_matrix <- as.matrix(dist(rbind(convex_hull_yes[, c("Income", "LotSize")], 
+                                    convex_hull_no[, c("Income", "LotSize")])))
+
+# Extract indices of the closest pair (support vectors)
+n1 <- nrow(convex_hull_yes)
+n2 <- nrow(convex_hull_no)
+dist_matrix <- dist_matrix[1:n1, (n1 + 1):(n1 + n2)]
+
+min_index <- which(dist_matrix == min(dist_matrix), arr.ind = TRUE)
+point1 <- convex_hull_yes[min_index[1], ] # Support vector from class "Yes"
+point2 <- convex_hull_no[min_index[2], ]  # Support vector from class "No"
+
+# Compute perpendicular bisector (Hard Margin Classifier)
+midpoint <- data.frame(
+  Income = (point1$Income + point2$Income) / 2,
+  LotSize = (point1$LotSize + point2$LotSize) / 2
+)
+
+slope <- (point2$LotSize - point1$LotSize) / (point2$Income - point1$Income)
+
+perpendicular_slope <- -1 / slope  # Perpendicular bisector
+
+b= midpoint$LotSize -  (perpendicular_slope * midpoint$Income)
+
+# Function for HMC (hard margin classifier)
+hmc_line <- function(x)  (perpendicular_slope * x) + b
+
+b1= point1$LotSize - (perpendicular_slope * point1$Income)
+b2= point2$LotSize - (perpendicular_slope * point2$Income)
+
+# Functions for margin lines (parallel to the HMC)
+margin_pos <- function(x)(perpendicular_slope * x) + b1
+margin_neg <- function(x) (perpendicular_slope * x) + b2
+# Create plot
+ggplot(df, aes(x = Income, y = LotSize, color = Class, shape = Class)) +
+  
+  # Scatter plot points
+  geom_point(size = 1.5, alpha = 0.8) +
+  scale_color_manual(values = c("darkorange", "darkcyan")) +
+  scale_shape_manual(values = c(17, 16)) +
+  
+  # Convex hulls
+  geom_polygon(data = convex_hull_yes, aes(x = Income, y = LotSize), fill = NA, color = "black", linetype = "solid") +
+  geom_polygon(data = convex_hull_no, aes(x = Income, y = LotSize), fill = NA, color = "black", linetype = "solid") +
+  
+  # Shortest connecting line
+  geom_segment(aes(x = point1$Income, y = point1$LotSize, 
+                   xend = point2$Income, yend = point2$LotSize), 
+               color = "black", linetype = "dotted", size = 1.2) +
+  
+  # HMC (Hard Margin Classifier) - perpendicular bisector
+  stat_function(fun = hmc_line, color = "black", size = 1) +
+  
+  # Margin boundaries (parallel to the HMC)
+  stat_function(fun = margin_pos, color = "black", linetype = "dashed", size = 0.5) +
+  stat_function(fun = margin_neg, color = "black", linetype = "dashed", size = 0.5) +
+  
+  # Support vectors (highlighted in red)
+  geom_point(data = rbind(point1, point2), aes(x = Income, y = LotSize), color = c("darkcyan", 
+                                                                                   "blue" ),
+             size = 2) +
+  # Labels and theme
+  labs(
+    x = "Income (standardized)",
+    y = "Lot size (standardized)",
+    title = "Hard Margin SVM with outlier",
+    color = "Owns a riding mower?"
+  ) 
+
+
+```
+
+]
+---
+.pull-left[ 
+The SMC, similar to the HMC, estimates the coeﬃcients of the hyperplane by solving the slightly modiﬁed optimization problem:
+
+
+![  ](SMC.png)
+
+Similar to before, the SMC ﬁnds the separating hyperplane that provides the 
+largest margin/gap between the two classes, but allows for some of the points 
+to cross over the margin boundaries. Here 𝐶 is the allowable budget for the 
+total amount of overlap and is our ﬁrst tunable hyperparameter for the SVM.
+
+]
+
+
+.pull-right[
+
+
+By varying $𝐶$, we allow points to violate the margin which helps make the SVM 
+robust to outliers. Ideally, the hyperplane 
+giving the decision boundary with the best generalization performance lies 
+somewhere in between these two extremes and can be determined using, for 
+example, $k -fold CV$.
+]
+
+
+
+---
+
+## The support vector machine
+
+###### So far, we’ve only used linear decision boundaries. Such a classiﬁer is likely too restrictive to be useful in practice, especially when compared to other algorithms that can adapt to nonlinear relationships. Fortunately, we can use a simple trick, called the __kernel trick__, to overcome this. A deep understanding of the kernel trick requires an understanding of __kernel functions__ and __reproducing  kernel Hilbert spaces__ . Fortunately, we can use a couple illustrations in 2-D/3-D feature space to drive home the key idea.
+
+.pull-left[
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.show="hold", out.width="80%", fig.height=8}
+
+
+# Load necessary libraries
+library(ggplot2)
+library(plotly)
+library(gridExtra)
+
+# Set random seed for reproducibility
+set.seed(42)
+
+# Generate circular data for binary classification
+n_samples <- 500
+x <- rnorm(n_samples)
+y <- rnorm(n_samples)
+z  <- rnorm(n_samples)
+# Binary classification: Inside circle -> 1, Outside -> 0
+labels <- as.factor(ifelse(sqrt(x^2 + y^2) < 1, 1, 0))
+
+# Create a data frame
+df <- data.frame(x = x, y = y, label = labels)
+
+# 1. 2D Plot using ggplot
+p1 <- ggplot(df, aes(x = x, y = y, color = label)) +
+  geom_point(size = 1.5) +
+  theme_minimal() +
+  ggtitle("2D Plot with Binary Labels") +
+  xlab("X-axis") +
+  ylab("Y-axis") +
+  scale_color_manual(values = c("darkorange", "darkcyan"))
+
+
+
+# 3. 2D Plot with Circle Separating Classes
+p3 <- ggplot(df, aes(x = x, y = y, color = label)) +
+  geom_point(size = 1.5) +
+  theme_minimal() +
+
+  xlab("X-axis") +
+  ylab("Y-axis") +
+  stat_function(fun = function(x) sqrt(1 - x^2), aes(color = "black"), linetype = "solid", size= 1.5) + # Circle
+  stat_function(fun = function(x) -sqrt(1 - x^2), aes(color = "black"),
+                linetype = "solid" , size= 1.5 ) +
+  scale_color_manual(values = c("darkorange", "darkcyan","black"))
+
+# Arrange the 2D and 3D plots side by side
+grid.arrange(p1, p3, nrow = 1)
+# Plot the 3D plot interactively
+
+```
+
+]
+
+.pull-right[
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.show="hold", out.width="80%", fig.height=7}
+# Load necessary libraries
+library(ggplot2)
+library(plotly)
+library(gridExtra)
+
+# Set random seed for reproducibility
+set.seed(42)
+
+# Generate circular data for binary classification
+n_samples <- 500
+x <- rnorm(n_samples)
+y <- rnorm(n_samples)
+z  <- x^2 +y^2
+# Binary classification: Inside circle -> 1, Outside -> 0
+labels <- as.factor(ifelse(sqrt(x^2 + y^2) < 1, 1, 0))
+
+# Create a data frame
+df <- data.frame(x = x, y = y, label = labels)
+# 2. 3D Plot using plotly
+p2 <- plot_ly(df, x = ~x, y = ~y, z = z, color = ~label, colors = c("darkorange", "darkcyan"),
+              marker = list(size = 5), type = "scatter3d", mode = "markers") %>%
+  layout(scene = list(xaxis = list(title = 'X-axis'),
+                      yaxis = list(title = 'Y-axis'),
+                      zaxis = list(title = 'Z-axis')))
+
+p2
+```
+
+
+]
+
+
+
+---
+
+
+In essence, SVMs use the kernel trick to enlarge the feature space using basis 
+functions (e.g., like in MARS or polynomial regression). In this enlarged (kernel- 
+induced) feature space, a hyperplane can often separate the two classes. The 
+resulting decision boundary, which is linear in the enlarged feature space, will 
+be nonlinear when transformed back onto the original feature space.
+Popular  kernel  functions  used  by  SVMs  include:
+
+•   $d -th$  degree  polynomial:  $𝐾 (𝑥, 𝑥′ )  =  𝛾 (1 + ⟨𝑥, 𝑥′ )^d⟩$
+
+•   Radial  basis  function:  $\displaystyle (x, x') = \exp\left(\gamma \| x - x' \|^2 \right)$
+
+•   Hyperbolic  tangent:  $K(x, x') = \tanh \left( k_1 \| x - x' \| + k_2 \right)$
+
+Here  $\langle x, x' \rangle = \sum_{i=1}^{n} x_i x'_i$    is   called   an   inner   product.  
+
+Notice   how   each   of these kernel functions include hyperparameters that need to be tuned. For 
+example, the polynomial kernel includes a degree term 𝑑 and a scale parameter $𝛾$. Similarly, the radial basis kernel includes a $𝛾$ parameter related to 
+the inverse of the $𝜎$ parameter of a normal distribution. In R, you can use 
+`caret`’s `getModelInfo()` to extract the hyperparameters from various SVM 
+implementations with diﬀerent kernel functions, for example:
+
+
+
+
+---
+
+
+
+```{r echo=TRUE, message=TRUE}
+#    Linear    (i.e.,    soft    margin    classifier)
+caret::getModelInfo("svmLinear")$svmLinear$parameters
+```
+
+--
+
+```{r echo=TRUE, message=TRUE}
+#    Polynomial    kernel
+caret::getModelInfo("svmPoly")$svmPoly$parameters
+```
+
+--
+
+```{r echo=TRUE, message=TRUE}
+#    Radial    basis    kernel
+caret::getModelInfo("svmRadial")$svmRadial$parameters
+```
+
+
+
+Through the use of various kernel functions, SVMs are extremely ﬂexible 
+and capable of estimating complex nonlinear decision boundaries.
+
+
+
+---
+
+![  ](SVM_VS_RF.png)
+
+Two spirals benchmark problem. Left: Decision boundary 
+from a random forest. Right: Decision boundary from an SVM with radial 
+basis kernel
+
+
+---
+### More than two classes
+
+The SVM, as introduced, is applicable to only two classes! What do we do 
+when we have more than two classes? There are two general approaches: 
+one-versus-al l (OVA) and one-versus-one (OVO). In OVA, we ﬁt an SVM 
+for each class (one class versus the rest) and classify to the class for which
+the  margin  is  the  largest.  In  OVO,  we  ﬁt  all    pairwise  SVMs  and
+classify to the class that wins the most pairwise competitions. All the popular 
+implementations of SVMs, including kernlab, provide such approaches to 
+multinomial classiﬁcation.
+
+### Support Vector Regression
+
+The idea  behind  support  vector  regression  (SVR)  is  very  similar:  ﬁnd  a  good  ﬁtting hyperplane  in  a  kernel-induced  feature  space  that  will  have  good  generalization performance  using  the  original  features.  Although  there  are  many  ﬂavors  of SVR,  we’ll  introduce  the  most  common:  __𝜖-insensitive  loss  regression__
+
+
+---
+
+Recall  that  the  least  squares  (LS)  approach  to  function  estimation    minimizes the   sum   of   the   squared   residuals,   where   in   general   we   deﬁne the residual as $𝑟 (𝑥, 𝑦) = 𝑦 − 𝑓 (𝑥)$. (In ordinary linear regression $𝑓 (𝑥) = \beta_ 0 + \beta_ {1} 𝑥_ {1} + \dots+ \beta_ p𝑥_p)$ .  The problem with LS is that it involves squaring the residuals which gives outliers undue inﬂuence on the ﬁtted regression function. 
+Although we could rely on the MAE metric (which looks at the absolute 
+value as opposed to the squared residuals), another intuitive loss metric, called 
+__𝜖-insensitive loss__, is more robust to outliers:
+
+$$
+L_{\epsilon}  =  \max(0, |𝑟 (𝑥, 𝑦)| − \epsilon) 
+$$
+
+Here $\epsilon$ is a threshold set by the analyst. In essence, we’re forming a margin 
+around the regression curve of width $\epsilon$.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+library(ggplot2)
+
+# Create data
+set.seed(42)  # For reproducibility
+x <- seq(0, 5, length.out = 100)
+f_x <- 2 + x * 1.2  # Linear function
+epsilon <- 1.5  # Margin
+
+# Create a data frame
+df <- data.frame(x = x, f_x = f_x)
+ggplot(df, aes(x, f_x)) +
+  geom_line(color = "black", size = 1) +  # Main function line
+  geom_line(aes(y = f_x + epsilon), linetype = "dashed", color = "darkgreen") +  # Upper bound
+  geom_line(aes(y = f_x - epsilon), linetype = "dashed", color = "darkgreen") +  # Lower bound
+  annotate("text", x = max(x) - 1, y = max(f_x) + epsilon, label = "f(x) + ε", color = "darkgreen", size = 5) +
+  annotate("text", x = max(x) - 1, y = min(f_x) - epsilon, label = "f(x) - ε", color = "darkgreen", size = 5) +
+  labs(x = "x", y = "f(x)")
+
+
+```
+
+
+---
+
+## Application
+
+In this study, we propose an approach based 
+support vector machines (SVM) to detect disease. To this end, we will use 
+data retrieved from Kaggle, presenting certain characteristics such as blood pressure or insulin the amount of insulin in the blood of certain individuals.
+Let's start by loading all the libraries we'll need and the data available on this github
+```{r echo=FALSE, message=FALSE, warning=FALSE, requireNamespace("DT", quietly=TRUE)}
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(GGally)
+library(gt)
+library(e1071)
+library(caret)
+library(skimr)
+library(DALEX)
+
+df <- read_delim("diabetes.csv", delim = ";",
+escape_double    =    FALSE,    col_types    =    cols(Outcome    =    col_factor(levels    =
+c("0",
+"1"))),    trim_ws    =    TRUE)
+DT::datatable(head(df), fillContainer = FALSE, options = list(pageLength = 4))
+```
+
+Analysis of the table reveals no missing values and generally high standard deviations, especially for the standard deviations, especially for the amount of Insulin in the blood
+---
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+df <- read_delim("diabetes.csv", delim = ";",
+escape_double    =    FALSE,    col_types    =    cols(Outcome    =    col_factor(levels    =
+c("0",
+"1"))),    trim_ws    =    TRUE)
+
+my_skim    <-    skim_with(numeric    =    sfl(    p50    =    NULL,hist=NULL,    n_missing=NULL,    complete_rate=  NULL,p25=NULL    ,p75=NULL))
+                                                 
+diabetes_df    <-    my_skim(df[,-9])
+diabetes_df    %>% 
+select(-skim_type)            %>% 
+gt()    %>%
+cols_label(
+numeric.mean    =    "Moyenne",    numeric.sd    =    "Ecart-type",
+numeric.p0    =    "Min"    ,
+numeric.p100    =    "Max")    %>%
+opt_stylize(style    =    6,    color    =    "cyan",    add_row_striping    =    TRUE)    %>% 
+tab_header(title    =    "Summary    of    Variables    in    the    diabetes    data")
+
+```
+
+Analysis of the table reveals no missing values and generally high standard deviations, especially 
+standard deviations, especially for the amount of Insulin in the blood.
+
+---
+.pull-left[
+When we analyze the density of each of the variables distributed according to Outcome, we see a phase shift between the curves for 1 and those for 0. In fact, these diagonal figures show that all the variables selected are important in the detection of diabetes. However, it can be seen that the quantity of glucose in the blood  and age could be highly determinant of diabetes.
+
+A very important first step is to normalize the values of the quantitative variables.  We'll use min-max normalization. This process transforms variables so that all values lie within the range between 0 and 1.
+
+]
+
+.pull-right[
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.show="hold", out.width="80%", fig.height=9}
+ggpairs(df,    aes(colour    =    Outcome,    alpha    =    0.4))
+```
+
+]
+
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+normalize    <-    function(x){
+return((x -  min(x))  /  (max(x)  - min(x))) }
+df[,1:8] <- apply(df[,1:8],MARGIN = 2 , FUN = normalize)
+```
+
+---
+We'll split our data into two parts.    Let's reserve 80% for training and 20% for model testing. 
+model testing.
+
+```{r message=FALSE, warning=FALSE, eval=FALSE}
+split_size        =            0.80
+sample_size    =            floor(split_size                *            nrow(df)) 
+set.seed(563)
+train_indices <- sample(seq_len(nrow(df)), size =
+sample_size)
+train <- df[train_indices, ] 
+test <- df[-train_indices, ]
+```
+
+We'll use the train function to find our model. Using random search and cross validation we'll determine the parameters of our model. Random search is often efficient, as it explores the space of hyperparameters randomly rather than systematically systematically like simple search. This enables us to cover a wider range of hyperparameter combinations of hyperparameters in fewer iterations.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+set.seed(023)
+grid    <-    expand.grid(    sigma=runif(25,0.1,30)    ,        C    =    runif(25,    0.1,    30))
+tuned_model    <-    train(Outcome    ~    .,    data    =    train,    method =  'svmRadial',    tuneGrid    =    grid, trControl= trainControl(method    =    'cv',    number    =    5))
+
+```
+
+
+
+
+
+---
+
+Displaying the best parameters after training 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+print(tuned_model$bestTune)
+```
+
+the confusion Matrix associated
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+confusionMatrix(tuned_model)
+```
+
+---
+We can see the average accuracy during the search for our parameters.   It is 0.75 .
+Now we'll build the final model using the parameters previously determined
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+final_model <- svm(Outcome ~ ., data = train, kernel = 'radial', cost = tuned_model$bestTune$C,probability = TRUE)
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+Predictions <- predict(final_model, newdata = train)
+conf_matrix <- table(Predictions, train$Outcome)
+Accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix) 
+print(paste('The model achieves classification at', Accuracy*100,'%'))
+```
+
+---
+
+### Prediction and evaluation
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+predictions    <-    predict(final_model,    newdata    =    test) 
+matrixx    <-    table(predictions,    test$Outcome)
+confusionMatrix(matrixx,mode    =    "everything")
+```
+
+---
+
+To evaluate the model, we're not going to use only accuracy, commonly known as __Accuracy__, because of the class imbalance in our dataset: $65$%  of the data are from non-diabetics.
+
+The **recall** of our model is **82.35%**. This means that the model is better at predicting the cases of people without diabetes. Otherwise, there's a small chance that the model will be wrong about a person who doesn't have diabetes. However, the percentage of people wrongly classified as diabetic is quite high. So $$a=1- Specificity$$ $$ a=53.41% $$  
+
+Overall, the estimated model gives good predictions on the dataset, taking **Recall** and **F1** as metrics.
+
+#### The best predictors
+
+Using the `explain` and `model_parts` functions from **(Biecek 2018)**, we'll highlight the variables that have the greatest importance in the design of our model.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE }
+ex <- explain(final_model,data=train, y=as.numeric( train$Outcome),predict_function = predict,predict_function_target_column = predictions)
+```
+
+---
+
+.pull-left[
+The variables Glucose, Age and BMI are the most important in the constitution of our model.     This result confirms the assumptions made in the descriptive analysis with `ggpairs`
+]
+
+.pull-right[   
+
+```{r echo=TRUE, message=FALSE, warning=FALSE , fig.show="hold", out.width="90%", fig.height=8}
+plot(model_parts(ex))
+```
+
+]
+
+
+---
+
+## Conclusion
+
+SVMs have a number of advantages compared to other ML algorithms. First oﬀ, they attempt to directly maximize generalizability (i.e., accuracy). Since SVMs are essentially just convex optimization problems, we’re always guaranteed to ﬁnd a global optimum (as opposed to potentially getting stuck in local optima as with DNNs). By softening the margin using a budget (or cost) parameter (𝐶), SVMs are relatively robust to outliers. And ﬁnally, using kernel functions, SVMs are ﬂexible enough to adapt to complex nonlinear decision boundaries (i.e., they can ﬂexibly model nonlinear relationships). 
+However, SVMs do carry a few disadvantages as well.  Lastly, special procedures (e.g., OVA and OVO) have to be used to handle multinomial classiﬁcation problems with SVMs.
+
+
+
 
 ---
 class: center, middle
